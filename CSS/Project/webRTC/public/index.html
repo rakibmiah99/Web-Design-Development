@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Video Calling</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            text-align: center;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #video-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        video {
+            width: 300px;
+            height: 200px;
+            margin: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+    </style>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+</head>
+<body>
+<div class="container">
+    <h1>WebRTC Video Calling</h1>
+    <div id="video-container">
+        <video id="local-video" autoplay muted></video>
+        <video id="remote-video" autoplay></video>
+    </div>
+    <div>
+        <input type="text" id="room-id" placeholder="Enter Room ID">
+        <button id="join-button">Join Room</button>
+    </div>
+</div>
+<script>
+    const localVideo = document.getElementById('local-video');
+    const remoteVideo = document.getElementById('remote-video');
+    const roomIdInput = document.getElementById('room-id');
+    const joinButton = document.getElementById('join-button');
+
+    const socket = io('/');
+    const peer = new Peer(undefined, {
+        path: '/peer',
+        host: '/',
+        port: '3000'
+    });
+
+    let localStream;
+    let peerId;
+
+    // Get local video stream
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        .then(stream => {
+            localStream = stream;
+            localVideo.srcObject = stream;
+
+            peer.on('call', call => {
+                call.answer(localStream);
+                call.on('stream', remoteStream => {
+                    remoteVideo.srcObject = remoteStream;
+                });
+            });
+        })
+        .catch(err => {
+            console.error('Error accessing media devices.', err);
+        });
+
+    // Join a room
+    joinButton.addEventListener('click', () => {
+        const roomId = roomIdInput.value;
+
+        if (roomId) {
+            socket.emit('join', roomId);
+
+            socket.on('user-connected', userId => {
+                const call = peer.call(userId, localStream);
+                call.on('stream', remoteStream => {
+                    remoteVideo.srcObject = remoteStream;
+                });
+            });
+
+            socket.on('signal', data => {
+                const call = peer.call(data.from, localStream);
+                call.on('stream', remoteStream => {
+                    remoteVideo.srcObject = remoteStream;
+                });
+            });
+        }
+    });
+
+    // Peer connection
+    peer.on('open', id => {
+        peerId = id;
+        console.log('My peer ID is:', peerId);
+    });
+
+</script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+<html>
+    <head>
+
+    </head>
+    <body>
+        <div id="products">
+            <h1 class="text-3xl font-bold underline">
+                Hello world!
+            </h1>
+        </div>
+
+
+        <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+        <script>
+            axios.get('https://dummyjson.com/products')
+            .then(function (response){
+                response.data.products.forEach(function (product){
+
+                })
+            })
+        </script>
+    </body>
+</html>
